@@ -1,5 +1,5 @@
 import socket
-from threading import Thread
+import threading
 from data_handler import *
 
 class friendlist:
@@ -24,9 +24,11 @@ class Peer:
         self.sender = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
         self.reciever = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
         address = (serverhost,5004)
+        print(address)
         self.sender.bind(address)#we get a socket with ip address and port 5004
         address = (serverhost,5005)
-        self.sender.bind(address)#we get a socket with ip address and port 5005
+        self.reciever.bind(address)#we get a socket with ip address and port 5005
+        print(address)
     def start_rec_server(self,buffersize):
         try:
             if (self.recieving):
@@ -35,17 +37,9 @@ class Peer:
             while True:
                 data,addr=reciever.recvfrom(buffersize)
                 extracted=extract_details(data)
-                #new thread
-                if extracted[0]==bytes(2).encode('utf8'):
-                    if __self_message_verify(extracted[1],extracted[2]):
-                        print(str(extracted[2])+'sent you:')
-                        print(str(decrypt_asymmetrically(extracted[1],friendlist.getpublickey(extracted[2]))))
-                elif extracted[0]==bytes(0).encode('utf8'):
-                    self.send_data(base64.urlsafe_b64encode(public_key),extracted[2])
-                elif extracted[0]==bytes(1).encode('utf8'):
-                    data=decrypt_asymmetrically(extracted[1],friendlist.getpublickey(extracted[2]))
-                    self.send_data(data,extracted[2])
-                #end thread
+                t1=threading.Thread(target=self.__pass_on_data,args=(extracted))
+                t1.run()
+                del t1
         except:
             self.recieveing=False
         finally:
@@ -54,5 +48,26 @@ class Peer:
         self.sender.sendto(data,(address,5005))
     def __self_message_verify(message,address):
         pass
+    def __pass_on_data(extracted):
+        if extracted[0]==bytes(2).encode('utf8'):
+            if __self_message_verify(extracted[1],extracted[2]):
+                print(str(extracted[2])+'sent you:')
+                print(str(decrypt_asymmetrically(extracted[1],friendlist.getpublickey(extracted[2]))))
+        elif extracted[0]==bytes(0).encode('utf8'):
+            self.send_data(base64.urlsafe_b64encode(public_key),extracted[2])
+        elif extracted[0]==bytes(1).encode('utf8'):
+            data=decrypt_asymmetrically(extracted[1],friendlist.getpublickey(extracted[2]))
+            self.send_data(data,extracted[2])
+    def mainloop(self,buffersize):
+        t=threading.Thread(target=self.start_rec_server,args=(buffersize))
+        t.start()
+        try:
+            while True:
+                print('enter [address to send to]~[message]\n')
+                val=input()
+                splitval=val.split('~')
+                self.send_data(splitval[1],splitval[0])
+        except:
+            print('Some error occured')
     
     
