@@ -1,6 +1,27 @@
 import socket
 import threading
 from data_handler import *
+import os
+from requests import get
+import portforwardlib as pf
+import netifaces
+
+def router_ip():
+    gws=netifaces.gateways()
+    return gws['default'][2][0]
+
+def serverhost():
+    s = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
+    s.connect( ( "www.google.com", 80 ) )
+    serverhost = s.getsockname()[0]
+    s.close()
+    return serverhost
+
+def check_ip():
+    ip = get('https://api.ipify.org').text
+    return ip
+
+pf.forwardPort(5005,5005,router_ip(),serverhost(),False,'UDP',0,'cabbage routing',True)
 
 class friendlist:
     def __init__(self):
@@ -16,32 +37,21 @@ class friendlist:
 
 class Peer:
     def __init__(self):
-        s = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
-        s.connect( ( "www.google.com", 80 ) )
-        serverhost = s.getsockname()[0]
-        s.close()
-        self.recieving=False
+        self.serverhost=serverhost()
         self.sender = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
         self.reciever = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-        address = (serverhost,5004)
-        print(address)
+        address = (self.serverhost,5004)
+        print(check_ip())
         self.sender.bind(address)#we get a socket with ip address and port 5004
-        address = (serverhost,5005)
+        address = (self.serverhost,5005)
         self.reciever.bind(address)#we get a socket with ip address and port 5005
-        print(address)
     def start_rec_server(self,buffersize):
         try:
-            if (self.recieving):
-                raise EOFError#just raised a random error will like to change later
-            self.recieving=True
             while True:
-                data,addr=reciever.recvfrom(buffersize)
-                extracted=extract_details(data)
-                t1=threading.Thread(target=self.__pass_on_data,args=(extracted))
-                t1.run()
-                del t1
+                data,addr=self.reciever.recvfrom(buffersize)
+                print(data)
         except:
-            self.recieveing=False
+            print('Some exception occured')
         finally:
             print('No Longer Recieving Data')
     def send_data(self,data,address):
@@ -59,15 +69,20 @@ class Peer:
             data=decrypt_asymmetrically(extracted[1],friendlist.getpublickey(extracted[2]))
             self.send_data(data,extracted[2])
     def mainloop(self,buffersize):
-        t=threading.Thread(target=self.start_rec_server,args=(buffersize))
+        t=threading.Thread(target=self.start_rec_server,args=(buffersize,))
         t.start()
-        try:
-            while True:
-                print('enter [address to send to]~[message]\n')
-                val=input()
-                splitval=val.split('~')
-                self.send_data(splitval[1],splitval[0])
-        except:
-            print('Some error occured')
+        while True:
+            print('enter [address to send to]~[message]\n')
+            val=input()
+            splitval=val.split('~')
+            self.send_data(splitval[1],base64.b64decode(splitval[0]))
+
     
     
+p=Peer()
+try:
+    p.mainloop(1024)
+except KeyboardInterrupt:
+    pf.forwardPort(5005,5005,router_ip(),serverhost(),True,'UDP',0,'cabbage routing',True)
+
+
