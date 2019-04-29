@@ -10,7 +10,7 @@ import pickle
 
 MyAddress='000.000.000.000'
 
-class Friends:
+class _Friends:
     def __init__(self):
         try:
             fr=open('Friends.bin','br')
@@ -199,6 +199,7 @@ class Client:
 
 class Peer:
     def init(self):
+        self.Friends=_Friends()
         server=Server()
         sThread=threading.Thread(target=server.run_server)
         sThread.daemon=True
@@ -207,12 +208,35 @@ class Peer:
         kThread.daemon=True
         kThread.start()
 
-    def SendData(self,address,data):
+    def SendData(self,friend,data):
+        retval=self.Friends.GetAddress(friend)
+        if retval not in ['friend not saved',None]:
+            self.SendDataNonFriend(retval,data)
+        else:
+            print(retval)
+            print('use SendDataNonFriend')
+
+    def SendDataNonFriend(self,_address,data):
+        address=raw_to_normal_address(_address)
+        using_peers,last=choose_path(active_peers(),address)
+        public_keys,encryption_keys=ready_keys(using_peers)
+        self.SendEncryptionKey(encryption_keys,public_keys)
+        message=ready_message(data,public_keys,address,last)
+        self.SendDataNonAnonymous(last,message)
+
+    def SendDataNonAnonymous(self,address,data):
         client = Client(address)
         client.SendMsg(data)
 
+    def SendEncryptionKey(self,encryption_keys,public_keys):
+        zclient=Client(tracker)
+        for i in encryption_keys:
+            msg=encrypt_asymmetrically(encryption_keys[i],public_keys[i])
+            msg+=i.encode('utf8')
+            zclient.SendMsg(msg)
+
     def SearchKeys(self):
-        kclient=Client()
+        kclient=Client(tracker)
         tclient.SendMsg(b'd' + PublicKey_ToBytes(DecryptionKey.PublicKey()) + MyAddress.encode('utf8'))
         while True:
             data_b = kclient.RecMsg()

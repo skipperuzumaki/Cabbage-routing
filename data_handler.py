@@ -27,6 +27,7 @@ class Client:
 # c decrypt and read for yourself
 # d public key sending
 # e get 15 active peer addresses with seperation charecter |
+# f denotes this is an encrypted encryption key
 
 tracker='000.000.000.000'#clearly temporary
 
@@ -75,33 +76,40 @@ def choose_path(active_peers,reciever_address):
     r=random.SystomRandom()
     r.shuffle(active_peers)
     using_peers=[]
-    nreciever=secrets.randbelow(npeers)
+    nreciever=secrets.randbelow(npeers-1)
     for i in range(npeers+1):
         using_peers.append(active_peers[i])
         if i==nreciever:
             using_peers.append(reciever_address)
         else:
             using_peers.append(active_peers[i])
-    return using_peers
+        if i = npeers:
+            last = using_peers[i]
+    return [using_peers,last]
 
 def ready_keys(using_peers):
+    encryption_keys=OrderedDict()
     public_keys=OrderedDict()
     for i in using_peers:
         public_keys[i]=request_public_key(i)
-    return public_keys
+        encryption_keys[i]=encryption_key()
+    return [public_keys,Encryption_keys]
 
-def ready_message(message,public_keys,reciever_address):
+def ready_message(message,encryption_keys,reciever_address,last):
     message=message.encode('utf8') #decrypt and read
     signature=sign_b(message,private_key)
     message = bytes('c'.encode('utf8')) + message
     message+=signature
     message+=my_address.encode('utf8')
-    base=encrypt_b(message,public_keys[reciever_address])
-    for i in public_keys:
-        if i!=reciever_address:
+    base=encrypt_b(message,encryption_keys[reciever_address])
+    for i in encryption_keys:
+        if i!=reciever_address and i!=last:
             base = bytes('b'.encode('utf8')) + base #decrypt and pass on
             base+=str(i).encode('utf8')
-            base=encrypt_b(base,public_keys[i])
+            base=encrypt_b(base,encryption_keys[i])
+    base = bytes('b'.encode('utf8')) + base #decrypt and pass on
+    base+=str(last).encode('utf8')
+    base=encrypt_b(base,encryption_keys[last])
     return base
 
 def extract_details(message,key):
