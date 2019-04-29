@@ -7,7 +7,7 @@ import random
 # a request public key
 # b decrypt and pass on message
 # c decrypt and read for yourself
-# d request address
+# d encryption key exchange site
 
 
 private_key,public_key=generate_key_pair()#temporarily
@@ -91,7 +91,7 @@ def extract_details(message,key):
         sign=d_cmd_msg[len(d_cmd_msg)-(len(eg_signature)+len(my_address)):len(d_cmd_msg)-len(my_address)]
         address_sender=d_cmd_msg[len(d_cmd_msg)-len(my_address):len(d_cmd_msg)]
         if verify_signature_b(sign,msg,request_public_key(address_sender)):
-            return [msg,address_sender]
+            return [cmd,msg,address_sender]
         else:
             return 'Falsified message recieved'
     elif d_cmd_msg[2:3]==b'd':

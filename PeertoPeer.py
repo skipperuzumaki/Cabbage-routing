@@ -8,6 +8,7 @@ import portforwardlib as pf
 import netifaces
 import pickle
 
+MyAddress='000.000.000.000'
 
 class Friends:
     def __init__(self):
@@ -84,6 +85,27 @@ class Friends:
         fw.close()
 
 
+class _DecryptionKeys:
+    def __init__(self,password):
+        self.__keys=dict()
+        self.__RSAkeys=generate_key_pair()
+
+    def AddKey(self,encryptedkey,address):
+        encryptionkey_b=decrypt_asymmetrically(encryptedkey,self.__RSAkeys[0])
+        encryptionkey=encryptionkey_b.decode('utf8')
+        self.__keys[address]=encryptionkey
+
+    def GetKey(self,address):
+        key=self.__keys[address]
+        self.__keys[address]=0
+        del self.__keys[address]
+
+    def PublicKey(self):
+        return self.__RSAkeys[1]
+
+DecryptionKey=_DecryptionKey()
+
+
 class PortForward:
     def __init__(self):
         self.router_ip=self.router_ip()
@@ -119,6 +141,7 @@ class Server:
         print('router_ip '+p.router_ip)
         print('serverhost '+p.serverhost)
         print('ip '+p.ip)
+        global MyAddress=p.ip
         p.EnablePortForward()
         self.connections=[]
         self.peers=[]
@@ -144,7 +167,12 @@ class Server:
                 data=c.recv(4096)
                 for conn in self.connections:
                     if data:
-                        print(data)
+                        details=extract_details(data,self.DecryptionKey.GetKey(a))
+                        if details[0]==b'b':
+                            client = Client(details[2])
+                            client.SendMsg(details[1])
+                        elif details[0]==b'c':
+                            print('message');print(details[1]);print('recieved from');print(details[2]);
                         self.disconnect(c,a)
         except:
             self.disconnect(c,a)
@@ -166,16 +194,36 @@ class Client:
 
     def RecMsg(self):
         data = self.sock.recv(1024)
-        print(data)
+        return data
 
 
 class Peer:
     def init(self):
+        self.tracker='000.000.000.000'#clearly temporary
         server=Server()
         sThread=threading.Thread(target=server.run_server)
         sThread.daemon=True
         sThread.start()
+        kThread=threading.Thread(target=self.SearchKeys)
+        kThread.daemon=True
+        kThread.start()
 
     def SendData(self,address,data):
         client = Client(address)
         client.SendMsg(data)
+
+    def GetPublicKey(self,address):
+        tclient = Client(self.tracker)
+        tclient.SendMsg(b'a'+address.encode('utf8'))
+        publickey_b = tclient.RecMsg()
+        tclient.seck.close()
+        return Bytes_ToPublicKey(publickey_b)
+
+    def SearchKeys(self):
+        kclient=Client()
+        tclient.SendMsg(b'd' + PublicKey_ToBytes(DecryptionKey.PublicKey()) + MyAddress.encode('utf8'))
+        while True:
+            data_b = kclient.RecMsg()
+            key=data_b[0:684]
+            address=data_b[684:len(data)]
+            DecryptionKey.addkey(key,address)

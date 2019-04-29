@@ -115,7 +115,7 @@ def encryption_key():
         backend=default_backend()
     )
     key = kdf.derive(password_bytes)
-    return base64.b64encode(key)
+    return base64.b64encode(key).decode('utf8')
 
 def encrypt(data,key):
     try:
@@ -141,8 +141,32 @@ def decrypt(encrypted_data,key):
     except (UnsupportedAlgorithm, AlreadyFinalized, InvalidTag):
         return"Symmetric decryption failed"
 
+def encrypt_b(data,key):
+    try:
+        aesgcm = AESGCM(base64.urlsafe_b64decode(key))
+        cipher_text_bytes = aesgcm.encrypt(
+            nonce=bytes([161]),#first 3 digits of the golden ratio
+            data=data,
+            associated_data=None
+        )
+        return (cipher_text_bytes)
+    except (UnsupportedAlgorithm, AlreadyFinalized, InvalidTag):
+        return"Symmetric encryption failed"
 
+def decrypt_b(encrypted_data,key):
+    try:
+        aesgcm = AESGCM(base64.urlsafe_b64decode(key))
+        decrypted_cipher_text_bytes = aesgcm.decrypt(
+            nonce=bytes([161]),#first 3 digits of the golden ratio
+            data=(encrypted_data),
+            associated_data=None
+        )
+        return decrypted_cipher_text_bytes
+    except (UnsupportedAlgorithm, AlreadyFinalized, InvalidTag):
+        return"Symmetric decryption failed"
 
+def PublicKey_ToBytes(PublicKey):
+    return PublicKey.public_bytes(encoding=serialization.Encoding.DER,format=serialization.PublicFormat.SubjectPublicKeyInfo)
 
-    
-
+def Bytes_ToPublicKey(bytes):
+    return serialization.load_der_public_key(bytes,default_backend())
