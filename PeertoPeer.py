@@ -199,7 +199,6 @@ class Client:
 
 class Peer:
     def init(self):
-        self.tracker='000.000.000.000'#clearly temporary
         server=Server()
         sThread=threading.Thread(target=server.run_server)
         sThread.daemon=True
@@ -211,13 +210,6 @@ class Peer:
     def SendData(self,address,data):
         client = Client(address)
         client.SendMsg(data)
-
-    def GetPublicKey(self,address):
-        tclient = Client(self.tracker)
-        tclient.SendMsg(b'a'+address.encode('utf8'))
-        publickey_b = tclient.RecMsg()
-        tclient.seck.close()
-        return Bytes_ToPublicKey(publickey_b)
 
     def SearchKeys(self):
         kclient=Client()
