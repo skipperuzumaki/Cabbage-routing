@@ -141,7 +141,8 @@ class Server:
         print('router_ip '+p.router_ip)
         print('serverhost '+p.serverhost)
         print('ip '+p.ip)
-        global MyAddress=p.ip
+        global MyAddress
+        MyAddress=p.ip
         p.EnablePortForward()
         self.connections=[]
         self.peers=[]
