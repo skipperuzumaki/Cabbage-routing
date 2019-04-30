@@ -83,7 +83,7 @@ def choose_path(active_peers,reciever_address):
             using_peers.append(reciever_address)
         else:
             using_peers.append(active_peers[i])
-        if i = npeers:
+        if i == npeers:
             last = using_peers[i]
     return [using_peers,last]
 
