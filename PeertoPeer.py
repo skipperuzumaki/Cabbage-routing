@@ -11,7 +11,7 @@ import pickle
 MyAddress='000.000.000.000'
 
 class _Friends:
-    def __init__(self):
+    def init(self):
         try:
             fr=open('Friends.bin','br')
             self.__friends=pickle.load(fr)
@@ -86,7 +86,7 @@ class _Friends:
 
 
 class _DecryptionKeys:
-    def __init__(self,password):
+    def __init__(self):
         self.__keys=dict()
         self.__RSAkeys=generate_key_pair()
 
@@ -103,7 +103,7 @@ class _DecryptionKeys:
     def PublicKey(self):
         return self.__RSAkeys[1]
 
-DecryptionKey=_DecryptionKey()
+DecryptionKey=_DecryptionKeys()
 
 
 class PortForward:
@@ -136,7 +136,7 @@ class PortForward:
 
 
 class Server:
-    def __init__(self):
+    def init(self):
         p=PortForward()
         print('router_ip '+p.router_ip)
         print('serverhost '+p.serverhost)
@@ -201,8 +201,10 @@ class Client:
 class Peer:
     def init(self):
         self.Friends=_Friends()
-        server=Server()
-        sThread=threading.Thread(target=server.run_server)
+        self.Friends.init()
+        self.server=Server()
+        self.server.init()
+        sThread=threading.Thread(target=self.server.run_server)
         sThread.daemon=True
         sThread.start()
         kThread=threading.Thread(target=self.SearchKeys)
